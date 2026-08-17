@@ -139,7 +139,7 @@ For Dokploy:
 
 The internal PostgreSQL service does not publish a host port. Before the API starts, the one-shot `migrate` service takes a PostgreSQL advisory lock and applies each checked-in SQL migration exactly once. Migration names are recorded in `schema_migrations`; a failure prevents the server from starting.
 
-GitHub OAuth and project persistence are backend-only in this phase; the current web UI still uses browser-local storage. Public cloud projects are available to authenticated users through the API. Creating or modifying private projects requires an active Pro entitlement in `subscriptions`. An expired private project remains owner-readable and deletable but is otherwise read-only and is never made public automatically.
+The Cloud panel in the web UI supports GitHub sign-in, public and private cloud copies, cross-device project opening, autosave with optimistic revisions, deletion, and sign-out. Browser-local private drafts remain free and available without an account. Creating or modifying private cloud projects requires an active Pro entitlement in `subscriptions`. An expired private project remains owner-readable, exportable, and deletable but is otherwise read-only and is never made public automatically.
 
 OpenAI is intentionally disabled by default. Keep it disabled on a public deployment until durable rate limiting and provider-side spend caps are configured. When enabled, the API requires an authenticated active-Pro user. The deterministic planner remains available anonymously while OpenAI is disabled.
 
@@ -147,8 +147,8 @@ OpenAI is intentionally disabled by default. Keep it disabled on a public deploy
 
 Not included yet:
 
-- Frontend login, cloud project, subscription checkout, or billing webhook UI
-- Payment-provider integration; Pro entitlements are provider-neutral database records
+- Subscription checkout or billing management UI
+- Payment-provider integration; Pro entitlements are currently provider-neutral database records
 - Multiplayer sync, comments, presence, or version history
 - PNG/SVG export; the current tldraw image-export API needs a deliberate UX and asset policy
 - Full two-way domain synchronization for arbitrary manually-created tldraw shapes
