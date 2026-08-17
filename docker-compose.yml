@@ -11,14 +11,14 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
     ports:
-      - "3000:3000"
+      - "3050:3000"
 
   web:
     build:
       context: .
       dockerfile: deploy/Dockerfile.web
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3050}
         VITE_TLDRAW_LICENSE_KEY: ${VITE_TLDRAW_LICENSE_KEY:-}
     restart: unless-stopped
     depends_on:

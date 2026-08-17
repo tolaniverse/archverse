@@ -111,7 +111,7 @@ docker compose up --build
 ```
 
 - Web: `http://localhost:4173`
-- API: `http://localhost:3000`
+- API: `http://localhost:3050`
 
 For Dokploy:
 
