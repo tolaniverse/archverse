@@ -1,5 +1,8 @@
+FROM oven/bun:1.2.22-alpine AS bun-base
+
 FROM node:22-alpine AS build
 WORKDIR /app
+COPY --from=bun-base /usr/local/bin/bun /usr/local/bin/bun
 RUN corepack enable && corepack prepare pnpm@9.12.1 --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.json ./
@@ -12,7 +15,7 @@ COPY apps/server apps/server
 COPY packages/architecture-model packages/architecture-model
 RUN pnpm --filter @archverse/architecture-model build && pnpm --filter @archverse/server build
 
-FROM oven/bun:1.2.22-alpine
+FROM bun-base
 WORKDIR /app
 ENV PORT=3000
 COPY --from=build /app/apps/server/dist/index.js ./index.js
