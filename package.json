@@ -1,0 +1,21 @@
+{
+  "name": "archverse",
+  "private": true,
+  "packageManager": "pnpm@9.12.1",
+  "engines": {
+    "bun": ">=1.2.0",
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "test": "turbo test",
+    "typecheck": "turbo typecheck",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3",
+    "turbo": "^2.5.4",
+    "typescript": "^5.8.3"
+  }
+}

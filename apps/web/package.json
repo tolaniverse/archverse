@@ -1,0 +1,26 @@
+{
+  "name": "@archverse/web",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "test": "bun test",
+    "typecheck": "tsc -b --pretty false"
+  },
+  "dependencies": {
+    "@archverse/architecture-model": "workspace:*",
+    "@tldraw/tldraw": "^5.3.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.22",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.1.1",
+    "typescript": "^5.8.3",
+    "vite": "^8.0.0"
+  }
+}

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+.turbo/
+.env
+.env.local
+.DS_Store
+*.log
+.pi-subagents/
