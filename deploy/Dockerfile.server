@@ -17,9 +17,12 @@ RUN pnpm --filter @archverse/architecture-model build && pnpm --filter @archvers
 
 FROM bun-base
 WORKDIR /app
+ENV NODE_ENV=production
 ENV PORT=3000
 COPY --from=build /app/apps/server/dist/index.js ./index.js
+COPY --from=build /app/apps/server/dist/migrate.js ./migrate.js
+COPY apps/server/migrations ./migrations
 USER bun
 EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD bun -e "const r=await fetch('http://127.0.0.1:3000/health');if(!r.ok)process.exit(1)"
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD bun -e "const r=await fetch('http://127.0.0.1:3000/ready');if(!r.ok)process.exit(1)"
 CMD ["bun", "index.js"]

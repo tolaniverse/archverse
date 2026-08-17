@@ -1,15 +1,53 @@
+x-server-build: &server-build
+  context: .
+  dockerfile: deploy/Dockerfile.server
+
 services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-archverse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-archverse}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build: *server-build
+    restart: "no"
+    command: ["bun", "migrate.js"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+      MIGRATIONS_DIR: /app/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   server:
-    build:
-      context: .
-      dockerfile: deploy/Dockerfile.server
+    build: *server-build
     restart: unless-stopped
     environment:
       PORT: 3000
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:4173}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+      APP_URL: ${APP_URL:?Set APP_URL}
+      WEB_URL: ${WEB_URL:?Set WEB_URL}
+      CORS_ORIGIN: ${WEB_URL:?Set WEB_URL}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:?Set GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:?Set GITHUB_CLIENT_SECRET}
       ARCHVERSE_ENABLE_OPENAI: ${ARCHVERSE_ENABLE_OPENAI:-false}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     ports:
       - "3050:3000"
 
@@ -26,3 +64,6 @@ services:
         condition: service_healthy
     ports:
       - "4173:80"
+
+volumes:
+  postgres-data:

@@ -58,14 +58,18 @@ Open `http://localhost:5173`. The API runs on `http://localhost:3000`. The deter
 
 ### Environment variables
 
-| Variable                  | Required   | Purpose                                                                     |
-| ------------------------- | ---------- | --------------------------------------------------------------------------- |
-| `ARCHVERSE_ENABLE_OPENAI` | No         | Explicit opt-in; defaults to `false` to prevent accidental public API spend |
-| `OPENAI_API_KEY`          | No         | Provider key used only when OpenAI is explicitly enabled                    |
-| `OPENAI_MODEL`            | No         | Defaults to `gpt-4.1-mini`                                                  |
-| `CORS_ORIGIN`             | Production | Exact browser origin allowed by the API                                     |
-| `VITE_API_URL`            | Production | Public API origin compiled into the web bundle                              |
-| `VITE_TLDRAW_LICENSE_KEY` | Production | tldraw production license key for the deployed domain                       |
+| Variable                  | Required    | Purpose                                                                     |
+| ------------------------- | ----------- | --------------------------------------------------------------------------- |
+| `DATABASE_URL`            | Persistence | PostgreSQL URL; the Compose hostname is `postgres`                          |
+| `APP_URL`                 | Auth        | Exact public API origin, without a trailing slash                           |
+| `WEB_URL`                 | Auth        | Exact public web origin used for redirects, CORS, and Origin checks         |
+| `GITHUB_CLIENT_ID`        | Auth        | GitHub OAuth app client ID                                                  |
+| `GITHUB_CLIENT_SECRET`    | Auth        | GitHub OAuth app secret                                                     |
+| `ARCHVERSE_ENABLE_OPENAI` | No          | Explicit opt-in; OpenAI mode also requires an authenticated active-Pro user |
+| `OPENAI_API_KEY`          | No          | Provider key used only when OpenAI is explicitly enabled                    |
+| `OPENAI_MODEL`            | No          | Defaults to `gpt-4.1-mini`                                                  |
+| `VITE_API_URL`            | Production  | Public API origin compiled into the web bundle                              |
+| `VITE_TLDRAW_LICENSE_KEY` | Production  | tldraw production license key for the deployed domain                       |
 
 `VITE_*` values are build-time variables. Rebuild the web image after changing them.
 
@@ -80,9 +84,10 @@ pnpm build        # production bundles
 
 ## API
 
-### `GET /health`
+### Health endpoints
 
-Returns server readiness information.
+- `GET /health` is process liveness and does not query PostgreSQL.
+- `GET /ready` checks persistence with `SELECT 1` and returns `503` when unavailable. The server container healthcheck uses this endpoint.
 
 ### `POST /api/plan`
 
@@ -101,6 +106,17 @@ Returns server readiness information.
 
 The response includes `source`, a summary, and validated `commands`. Requests and responses are validated with shared Zod schemas. Semantic reducer validation rejects duplicate IDs and dangling connections.
 
+### Authentication and projects
+
+- `GET /api/auth/github` starts GitHub OAuth with state and S256 PKCE.
+- `GET /api/auth/me` returns the current user and Pro entitlement.
+- `POST /api/auth/logout` revokes the opaque database session.
+- `GET|POST /api/projects` lists or creates the authenticated user's projects.
+- `GET|PATCH /api/projects/:id` reads or changes a project using optimistic `revision` checks.
+- `DELETE /api/projects/:id?revision=<positive-integer>` atomically deletes only the expected revision and returns `409` on conflict.
+
+Private projects deliberately return `404` to non-owners. Public project reads are anonymous. Project responses omit internal owner IDs and sensitive JSON responses use `Cache-Control: no-store`. Cookie-authenticated unsafe requests require an exact `Origin` matching `WEB_URL`. Production requires HTTPS `APP_URL` and uses Secure, Path-scoped `__Host-` cookies.
+
 ## Docker and Dokploy
 
 Run both containers locally:
@@ -117,19 +133,22 @@ For Dokploy:
 
 1. Create a Compose service from this repository.
 2. Assign public domains to web port `80` and server port `3000`.
-3. Set `VITE_API_URL` to the public HTTPS API domain.
-4. Set `CORS_ORIGIN` to the public HTTPS web domain.
-5. Add `VITE_TLDRAW_LICENSE_KEY`, then rebuild.
+3. Set `APP_URL=https://api.example.com`, `WEB_URL=https://app.example.com`, and `VITE_API_URL=https://api.example.com` (no trailing slashes).
+4. Create a GitHub OAuth app with callback URL `https://api.example.com/api/auth/github/callback`.
+5. Set a unique `POSTGRES_PASSWORD` and `DATABASE_URL=postgres://archverse:<URL-ENCODED-PASSWORD>@postgres:5432/archverse`, then add the GitHub and tldraw variables from `.env.example`.
 
-OpenAI is intentionally disabled by default. Do not enable it on a public deployment until authentication, durable rate limiting, and provider-side spend caps are configured. The deterministic planner remains available without it.
+The internal PostgreSQL service does not publish a host port. Before the API starts, the one-shot `migrate` service takes a PostgreSQL advisory lock and applies each checked-in SQL migration exactly once. Migration names are recorded in `schema_migrations`; a failure prevents the server from starting.
 
-There is no database in this slice because project data is currently browser-local. Adding an unused PostgreSQL container would create operational work without persistence value.
+GitHub OAuth and project persistence are backend-only in this phase; the current web UI still uses browser-local storage. Public cloud projects are available to authenticated users through the API. Creating or modifying private projects requires an active Pro entitlement in `subscriptions`. An expired private project remains owner-readable and deletable but is otherwise read-only and is never made public automatically.
+
+OpenAI is intentionally disabled by default. Keep it disabled on a public deployment until durable rate limiting and provider-side spend caps are configured. When enabled, the API requires an authenticated active-Pro user. The deterministic planner remains available anonymously while OpenAI is disabled.
 
 ## Current boundaries
 
 Not included yet:
 
-- Authentication, server-side projects, or cross-device persistence
+- Frontend login, cloud project, subscription checkout, or billing webhook UI
+- Payment-provider integration; Pro entitlements are provider-neutral database records
 - Multiplayer sync, comments, presence, or version history
 - PNG/SVG export; the current tldraw image-export API needs a deliberate UX and asset policy
 - Full two-way domain synchronization for arbitrary manually-created tldraw shapes
